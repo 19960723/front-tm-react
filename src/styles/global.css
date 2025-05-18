@@ -1,0 +1,38 @@
+body {
+  background-color: #f4f4f5;
+}
+/* 一行溢出隐藏  */
+.text_one {
+  display: block;
+  white-space: nowrap;
+  word-break: keep-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 两行溢出隐藏  */
+.text_two {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-all;
+}
+.bdb {
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.custom_login_button {
+  border: 1px solid #f5bc93;
+  background-color: #fdf6ec;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #e87523;
+  white-space: nowrap;
+  padding: 5px 15px;
+  cursor: pointer;
+}
+.custom_login_button:hover {
+  border-color: #f7b585;
+  background-color: #fff1dc;
+}

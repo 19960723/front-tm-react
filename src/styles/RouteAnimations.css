@@ -1,0 +1,148 @@
+/* fade */
+.fade-enter {
+  opacity: 0;
+}
+.fade-enter-active {
+  opacity: 1;
+  transition: opacity 300ms;
+}
+.fade-exit {
+  opacity: 1;
+}
+.fade-exit-active {
+  opacity: 0;
+  transition: opacity 300ms;
+}
+
+/* fade-scale */
+.fade-scale-enter {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.fade-scale-enter-active {
+  opacity: 1;
+  transform: scale(1);
+  transition:
+    opacity 300ms ease,
+    transform 300ms ease;
+}
+
+.fade-scale-exit {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.fade-scale-exit-active {
+  opacity: 0;
+  transform: scale(1.03);
+  transition:
+    opacity 300ms ease,
+    transform 300ms ease;
+}
+
+/* slide */
+.slide-enter {
+  transform: translateX(100%);
+}
+.slide-enter-active {
+  transform: translateX(0);
+  transition: transform 300ms;
+}
+.slide-exit {
+  transform: translateX(0);
+}
+.slide-exit-active {
+  transform: translateX(-100%);
+  transition: transform 300ms;
+}
+
+/* zoom */
+.zoom-enter {
+  transform: scale(0.9);
+  opacity: 0;
+}
+.zoom-enter-active {
+  transform: scale(1);
+  opacity: 1;
+  transition: all 300ms;
+}
+.zoom-exit {
+  transform: scale(1);
+  opacity: 1;
+}
+.zoom-exit-active {
+  transform: scale(0.9);
+  opacity: 0;
+  transition: all 300ms;
+}
+
+/* slide-horizontal */
+
+.slide-horizontal-enter {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.slide-horizontal-enter-active {
+  opacity: 1;
+  transform: translateX(0);
+  transition: all 300ms ease;
+}
+
+.slide-horizontal-exit {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.slide-horizontal-exit-active {
+  opacity: 0;
+  transform: translateX(-30%);
+  transition: all 300ms ease;
+}
+
+/* slide-vertical */
+
+.slide-vertical-enter {
+  opacity: 0;
+  transform: translateY(100%);
+}
+
+.slide-vertical-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 300ms ease-in-out;
+}
+
+.slide-vertical-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.slide-vertical-exit-active {
+  opacity: 0;
+  transform: translateY(-20%);
+  transition: all 300ms ease-in-out;
+}
+
+/* cover-fade */
+.cover-fade-enter {
+  opacity: 0;
+  transform: translateX(20%);
+  z-index: 1;
+}
+
+.cover-fade-enter-active {
+  opacity: 1;
+  transform: translateX(0);
+  transition: all 400ms ease;
+}
+
+.cover-fade-exit {
+  opacity: 1;
+}
+
+.cover-fade-exit-active {
+  opacity: 0;
+  transition: opacity 300ms ease;
+}

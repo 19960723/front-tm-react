@@ -1,0 +1,35 @@
+.custom_text_input {
+  background: #f2f3f5;
+  border-radius: 8px;
+  min-height: 60px;
+  transition: min-height 0.35s ease-out;
+  word-break: break-word;
+  border: 1px solid transparent;
+  line-height: 1.6;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+}
+.custom_text_input.isFocused {
+  min-height: 150px;
+  border-color: #e87523;
+  background: #fff;
+}
+.placeholder {
+  color: #373c43; /* 设置占位符颜色 */
+}
+.placeholder:empty:before {
+  content: attr(data-placeholder); /* 设置占位符文本 */
+  color: #8f959e; /* 设置占位符颜色 */
+}
+.remark_input {
+  padding: 10px 24px 10px 16px;
+  cursor: text;
+  flex: 1;
+}
+[contenteditable]:focus {
+  outline: none;
+}
+.remark_input:focus {
+  outline: none;
+}
