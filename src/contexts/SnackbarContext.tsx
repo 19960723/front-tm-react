@@ -76,6 +76,7 @@ export const SnackbarProvider: React.FC<SnackbarProviderProps> = ({ children }) 
   }, []);
 
   const closeSnackbar = useCallback((event: React.SyntheticEvent | Event | null, reason?: string) => {
+    console.log(event);
     if (reason === 'clickaway') {
       return;
     }

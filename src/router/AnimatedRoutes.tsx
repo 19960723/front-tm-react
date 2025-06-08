@@ -1,7 +1,7 @@
 // AnimatedRoutes.tsx
-import { Suspense, useRef } from 'react';
+import { Suspense } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
-import { CSSTransition, TransitionGroup } from 'react-transition-group';
+// import { CSSTransition, TransitionGroup } from 'react-transition-group';
 import KeepAlive from 'react-activation';
 import Loading from '../components/Loading';
 import { routeList, RouteItem } from './routeConfig';
@@ -27,9 +27,9 @@ const renderRoutes = (routes: RouteItem[]) =>
 
 const AnimatedRoutes = () => {
   const location = useLocation();
-  const nodeRef = useRef<HTMLDivElement>(null);
-  const currentRoute = routeList.find((r) => r.path === location.pathname);
-  const animation = currentRoute?.animation || '';
+  // const nodeRef = useRef<HTMLDivElement>(null);
+  // const currentRoute = routeList.find((r) => r.path === location.pathname);
+  // const animation = currentRoute?.animation || '';
 
   return (
     <Suspense fallback={<Loading />}>

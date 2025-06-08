@@ -11,12 +11,11 @@ interface ArticleItemProps {
     title: string;
     addTime: string;
     hits?: number;
-    intro?: string;
-    content?: string;
+    intro?: string | null;
+    content?: string | null;
     coverPhoto: string;
   };
 }
-
 export default function ArticleItem({ item }: ArticleItemProps) {
   return (
     <Box key={item.id} className="flex overflow-hidden p-5 bdb">
@@ -38,7 +37,11 @@ export default function ArticleItem({ item }: ArticleItemProps) {
             )}
           </Stack>
         </div>
-        <Typography variant="body2" className="text_two text-sm text-primary_text" dangerouslySetInnerHTML={{ __html: item.intro || item.content }} />
+        <Typography
+          variant="body2"
+          className="text_two text-sm text-primary_text"
+          dangerouslySetInnerHTML={{ __html: item.intro || item.content || '' }}
+        />
       </Box>
       <Box className="w-[120px] h-[80px] ml-8">
         <img src={getFileAccessHttpUrl(item.coverPhoto)} alt={item.title} className="w-full h-full rounded-lg cursor-pointer" />

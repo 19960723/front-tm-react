@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, MouseEvent } from 'react';
 import { NavLink } from 'react-router-dom';
 import clsx from 'clsx';
-import { TextField, Box, InputAdornment, Avatar, Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
+import { TextField, Box, InputAdornment, Avatar, Dialog, DialogTitle, DialogContent, DialogActions, Button, Menu, MenuItem } from '@mui/material';
 import Search from '@mui/icons-material/Search';
+import AccountCircle from '@mui/icons-material/AccountCircle';
 import { useGetRandomImage } from '@/api/index';
 import { useLoginHandler } from '@/api/user';
-import useUserStore from '@/store';
+import useUserStore from '@/store/userStore';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 const LoginModalComponent = () => {
   const [open, setOpen] = useState(false); // 控制对话框的显示与隐藏
@@ -16,7 +18,7 @@ const LoginModalComponent = () => {
   const [usernameError, setUsernameError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [captchaError, setCaptchaError] = useState('');
-  const { loginAction } = useUserStore();
+  const { setToken, setUserName, setTenantId, setUserInfo } = useUserStore();
 
   // 点击登录按钮打开对话框
   const handleClickOpen = () => {
@@ -38,17 +40,17 @@ const LoginModalComponent = () => {
   };
 
   // 处理账号输入变化
-  const handleUsernameChange = (event: any) => {
+  const handleUsernameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setUsername(event.target.value);
     setUsernameError(''); // 输入时清除错误提示
   };
   // 处理密码输入变化
-  const handlePasswordChange = (event: any) => {
+  const handlePasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setPassword(event.target.value);
     setPasswordError(''); // 输入时清除错误提示
   };
   // 处理验证码输入变化
-  const handleCaptchaChange = (event: any) => {
+  const handleCaptchaChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setCaptcha(event.target.value);
     setCaptchaError(''); // 输入时清除错误提示
   };
@@ -72,21 +74,29 @@ const LoginModalComponent = () => {
     getRandomImage(`/sys/randomImage/${NewCheckKey}`, {});
   };
   // 处理登录逻辑
-  const { login: loginApiHandler } = useLoginHandler();
+  const { login: loginApiHandler, response } = useLoginHandler();
   const handleLogin = async () => {
     if (validateForm()) {
       // 在这里处理你的登录逻辑，例如发送 API 请求进行身份验证
       console.log('登录账号:', username, '密码:', password, '验证码:', captcha, 'checkKey', checkKey);
       // 登录成功后可以关闭对话框或者进行其他操作
 
-      loginApiHandler({
+      const result = await loginApiHandler({
         username,
         password,
         captcha,
         checkKey,
       });
-
-      handleClose();
+      if (result) {
+        const { userInfo, token } = result;
+        const { username, tenantId } = userInfo;
+        console.log(response, '~~-', result);
+        setToken(token);
+        setUserName(username);
+        setTenantId(tenantId);
+        setUserInfo(userInfo);
+        handleClose();
+      }
     }
   };
   useEffect(() => {
@@ -162,11 +172,30 @@ const LoginModalComponent = () => {
 };
 
 const LayoutHeader = () => {
+  const { userInfo, token, logout } = useUserStore();
+  const [confirm_open, setConfirmOpen] = useState(false);
   const header_menu = [
     { label: '资讯', path: '/' },
     { label: '论坛', path: '/forum' },
   ];
-  const token = '';
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+  const handleClick = (event: MouseEvent<HTMLElement>) => {
+    console.log(event, '~~');
+    setAnchorEl(event.currentTarget);
+  };
+  const handlerLogoutFn = () => {
+    setConfirmOpen(true);
+  };
+  const handlerLogout = () => {
+    logout();
+    setConfirmOpen(false);
+    setAnchorEl(null);
+  };
   return (
     <div className="md:h-16 bg-white shadow flex justify-center sticky top-0 z-10">
       <div className="flex justify-between items-center w-full md:w-[1200px] 2xl:w-[1400px]">
@@ -212,14 +241,43 @@ const LayoutHeader = () => {
               // <div className="custom_login_button">登录</div>
               <LoginModalComponent />
             ) : (
-              <div className="flex flex-col items-center">
-                <Avatar alt="Remy Sharp" sx={{ width: 30, height: 30 }} src="/static/images/avatar/1.jpg" />
-                <span className="mt-1 text-[12px] text-primary">林小龙</span>
+              <div className="flex flex-col items-center cursor-pointer" onClick={handleClick}>
+                <Avatar alt="Remy Sharp" sx={{ width: 30, height: 30 }} src={userInfo.avatar || '/static/images/avatar/1.jpg'} />
+                <span className="mt-1 text-[12px] text-primary">{userInfo.realname}</span>
               </div>
             )}
           </div>
         </div>
       </div>
+      <Menu
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'center',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'center',
+        }}
+      >
+        <MenuItem onClick={handlerLogoutFn}>
+          <div className="flex items-center text-primary_text">
+            <AccountCircle sx={{ width: 24, height: 24 }} />
+            <span className="ml-[5px] text-[14px]">退出登录</span>
+          </div>
+        </MenuItem>
+      </Menu>
+      <ConfirmDialog
+        open={confirm_open}
+        title="注销"
+        content="是否退出登录？"
+        confirmText="确认"
+        cancelText="取消"
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={handlerLogout}
+      />
     </div>
   );
 };

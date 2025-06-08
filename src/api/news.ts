@@ -1,5 +1,5 @@
 import { useAxios } from '../hooks/useAxios';
-// import { BasicPageListParams } from './model/baseModel';
+import { BasicPageListParams } from './model/baseModel';
 
 const Api = {
   queryNewsById: '/zxhome/zxhomeNewsInfo/queryById',
@@ -25,7 +25,7 @@ const CommentApi = {
 
 export const useGetNewsList = () => {
   const { response, loading, error, fetchData } = useAxios();
-  const getList = (params?: any) => {
+  const getList = (params?: BasicPageListParams) => {
     fetchData({
       url: Api.getNewsList,
       method: 'GET',
@@ -36,7 +36,7 @@ export const useGetNewsList = () => {
 };
 export const useGetNewsDetail = () => {
   const { response, loading, error, fetchData } = useAxios();
-  const getDetail = (params?: any) => {
+  const getDetail = (params?: BasicPageListParams) => {
     fetchData({
       url: Api.queryNewsById,
       method: 'GET',
@@ -49,7 +49,7 @@ export const useGetNewsDetail = () => {
 // 获取评论列表 （数组）
 export const useGetNewsCommentList = () => {
   const { response, loading, error, fetchData } = useAxios();
-  const getList = (params?: any) => {
+  const getList = (params?: BasicPageListParams) => {
     fetchData({
       url: CommentApi.list,
       method: 'GET',
@@ -57,4 +57,29 @@ export const useGetNewsCommentList = () => {
     });
   };
   return { response, loading, error, getList };
+};
+
+// 点赞
+export const useSaveNewsLinkApi = () => {
+  const { response, loading, error, fetchData } = useAxios();
+  const postApifn = (data?: BasicPageListParams) => {
+    return fetchData({
+      url: Api.saveNewsLinkApi,
+      method: 'post',
+      data,
+    });
+  };
+  return { response, loading, error, postApifn };
+};
+// 收藏
+export const useSaveNewsCollectApi = () => {
+  const { response, loading, error, fetchData } = useAxios();
+  const postApifn = (data?: BasicPageListParams) => {
+    return fetchData({
+      url: Api.saveNewsCollectApi,
+      method: 'post',
+      data,
+    });
+  };
+  return { response, loading, error, postApifn };
 };

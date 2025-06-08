@@ -19,12 +19,16 @@ const NewsPage = () => {
   useEffect(() => {
     getNewsLabelFn();
   }, []);
+  interface label_value {
+    id: number;
+    name?: string;
+  }
   return (
     <div className="flex mx-auto mt-[20px] md:w-[1200px] 2xl:w-[1400px]">
       <div className="flex-1 overflow-hidden bg-white">
         <div className="flex items-center leading-[3rem] bdb">
           {label_list &&
-            label_list.map((v: any, i: number) => (
+            label_list.map((v: label_value, i: number) => (
               <div
                 key={i}
                 className={clsx('mx-6 cursor-pointer', activeTab === v.id ? 'font-bold text-active' : 'text-primary hover:text-active')}

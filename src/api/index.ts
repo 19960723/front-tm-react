@@ -32,7 +32,8 @@ export function getFileAccessHttpUrl(avatar: string, subStr?: string) {
       }
     }
   } catch (err) {
-    return;
+    console.log(err);
+    return '';
   }
 }
 

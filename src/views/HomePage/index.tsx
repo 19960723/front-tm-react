@@ -22,6 +22,12 @@ const HomePage = () => {
   useEffect(() => {
     testApiRequestHandler();
   }, []);
+
+  interface labelProps {
+    id: number;
+    name: string;
+  }
+
   return (
     <>
       <div className="bg-red-200 w-full h-[100vh]">
@@ -41,7 +47,7 @@ const HomePage = () => {
                 </div>
               </React.Fragment>
             ))
-          : label_list?.map((v: any) => <div key={v.id}>{v.name}</div>)}
+          : label_list?.map((v: labelProps) => <div key={v.id}>{v.name}</div>)}
       </div>
     </>
   );

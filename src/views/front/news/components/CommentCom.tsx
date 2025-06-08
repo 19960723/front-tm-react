@@ -1,6 +1,6 @@
 import { Avatar, Button, Box } from '@mui/material';
 import { useGetNewsCommentList } from '@/api/news';
-import { useEffect, useState, useRef, ChangeEvent, FocusEvent } from 'react';
+import { useEffect, useState, useRef, FocusEvent } from 'react';
 import clsx from 'clsx';
 import './comment.css';
 
@@ -8,14 +8,17 @@ import './comment.css';
 interface CommentProps {
   info: { id?: string | number; createBy_dictText?: string };
 }
-
+interface userInfoProps {
+  avatar?: string;
+}
 const CustomCommentInput: React.FC<CommentProps> = ({ info }) => {
   const [inputVal, setInputVal] = useState('');
   const [isFocused, setFucused] = useState(false);
   const [placeholder, setPlaceholder] = useState('理性发言，友好互动');
   const inputRef = useRef<HTMLDivElement>(null);
-  const userInfo: any = {};
-  const inputHandler = (event: ChangeEvent<HTMLDivElement>) => {
+  const userInfo: userInfoProps = {};
+  // event: ChangeEvent<HTMLDivElement>
+  const inputHandler = () => {
     // Handle input changes here
     // console.log('Input:', event.target.textContent, '~~', inputRef.current);
     setInputVal(`${inputRef.current?.innerText.trim()}`);
@@ -58,7 +61,7 @@ const CustomCommentInput: React.FC<CommentProps> = ({ info }) => {
               </Button>
             )}
 
-            <Button size="small" variant="contained" disabled={!Boolean(inputVal)} sx={{ backgroundColor: '#409eff' }}>
+            <Button size="small" variant="contained" disabled={!inputVal} sx={{ backgroundColor: '#409eff' }}>
               {info && info.id ? `回复 ${info.createBy_dictText}` : '发送'}
             </Button>
           </div>
@@ -78,12 +81,19 @@ const CommentCom = ({ id = '' }) => {
       pageSize: 10,
     });
   }, []);
+  interface commentProps {
+    id: string;
+    avatar: string;
+    createBy_dictText: string;
+    content: string;
+    createTime: string;
+  }
   return (
     <div className="bg-white p-[40px] mt-6">
       <CustomCommentInput info={commentInfo} />
       <div className="mt-10">
         {data_list && data_list.records.length ? (
-          data_list.records.map((v: any) => (
+          data_list.records.map((v: commentProps) => (
             <div key={v.id} className="comment_item mb-2">
               <div className="flex pt-[10px] pb-[14px]">
                 <Avatar src={v.avatar} sx={{ width: '36px', height: '36px' }} />

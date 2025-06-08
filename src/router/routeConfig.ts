@@ -3,7 +3,7 @@ import { lazy } from 'react';
 
 export interface RouteItem {
   path: string;
-  element: React.LazyExoticComponent<React.ComponentType<any>>;
+  element: React.LazyExoticComponent<React.ComponentType<unknown>>;
   animation?: string; // fade slide zoom
   keepAlive: boolean;
   cacheKey?: string;

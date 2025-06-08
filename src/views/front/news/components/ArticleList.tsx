@@ -1,5 +1,5 @@
 import { Box, Typography, Skeleton } from '@mui/material';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useInView } from 'react-intersection-observer';
 import { useGetNewsList } from '@/api/news';
 import ArticleItem from './ArticleItem';
@@ -11,12 +11,7 @@ interface NewsItem {
   hits?: number;
   intro?: string;
   content?: string;
-  coverPhoto?: string;
-}
-
-interface NewsListResponse {
-  records?: NewsItem[];
-  total?: number;
+  coverPhoto: string;
 }
 
 function ArticleSkeleton() {
@@ -98,10 +93,9 @@ function ArticleList({ labelId = 0 }) {
       </Typography>
     );
   }
-
   return (
     <>
-      {items.map((item: any) => (
+      {items.map((item: NewsItem) => (
         <ArticleItem key={item.id} item={item} />
       ))}
       {loading && page > 1 && <ArticleSkeleton />}
