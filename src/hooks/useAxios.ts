@@ -29,13 +29,14 @@ axiosInstance.interceptors.request.use(
 
 axiosInstance.interceptors.response.use(
   async (response: AxiosResponse) => {
-    // const { data } = response;
-    // if (data.code && data.code !== 200) {
-    //   return Promise.reject(new Error(data.message || '请求失败'));
-    // }
+    const { data } = response;
+    if (data.code && data.code !== 200) {
+      return Promise.reject(new Error(data.message || '请求失败'));
+    }
     return Promise.resolve(response);
   },
   (error: AxiosError) => {
+    console.log('aaa', error);
     return errFn(error);
     // return Promise.reject(error);
   }
@@ -81,6 +82,7 @@ const errFn = (error: AxiosError) => {
   const { logout, token } = useUserStore.getState();
   if (error.response) {
     const err_message = (error.response?.data as any)?.message;
+    console.log(error.response.status, '~~');
     switch (error.response.status) {
       case 401:
         const message = err_message || '登录已过期，请重新登录';

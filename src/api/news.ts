@@ -58,6 +58,42 @@ export const useGetNewsCommentList = () => {
   };
   return { response, loading, error, getList };
 };
+// 添加评论
+export const useAddNewsComment = () => {
+  const { response, loading, error, fetchData } = useAxios();
+  const postFn = (data?: BasicPageListParams) => {
+    return fetchData({
+      url: CommentApi.add,
+      method: 'POST',
+      data,
+    });
+  };
+  return { response, loading, error, postFn };
+};
+// 修改评论
+export const useEditNewsComment = () => {
+  const { response, loading, error, fetchData } = useAxios();
+  const putFn = (data?: BasicPageListParams) => {
+    return fetchData({
+      url: CommentApi.edit,
+      method: 'PUT',
+      data,
+    });
+  };
+  return { response, loading, error, putFn };
+};
+// 删除评论
+export const useDeleteNewsComment = () => {
+  const { response, loading, error, fetchData } = useAxios();
+  const deleteFn = (params?: BasicPageListParams) => {
+    return fetchData({
+      url: CommentApi.delete,
+      method: 'DELETE',
+      params,
+    });
+  };
+  return { response, loading, error, deleteFn };
+};
 
 // 点赞
 export const useSaveNewsLinkApi = () => {

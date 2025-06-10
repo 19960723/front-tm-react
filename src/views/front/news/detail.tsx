@@ -48,7 +48,7 @@ const NewsContent: React.FC<DetailInfoProps> = React.memo(
 const NewsDetail = () => {
   const [detailInfo, setDetailInfo] = useState<DetailInfoProps>({});
   const { id } = useParams();
-  const { username } = useUserStore();
+  const { token, username, toggleLoginModal } = useUserStore();
   const { getDetail: queryNewsById, response } = useGetNewsDetail();
 
   const classNav = [
@@ -70,6 +70,10 @@ const NewsDetail = () => {
 
   const { postApifn: saveNewsLinkApi } = useSaveNewsLinkApi();
   const linkHandler = () => {
+    if (!token) {
+      toggleLoginModal(true);
+      return;
+    }
     const isLike = detailInfo.isLike === 0 ? 1 : 0;
     const params = {
       username,
@@ -86,6 +90,10 @@ const NewsDetail = () => {
 
   const { postApifn: saveNewsCollectApi } = useSaveNewsCollectApi();
   const collectHandler = () => {
+    if (!token) {
+      toggleLoginModal(true);
+      return;
+    }
     const isCollect = detailInfo.isCollect === 0 ? 1 : 0;
     const params = {
       username,

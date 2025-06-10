@@ -21,6 +21,7 @@ interface UserStore {
   setTenantId: (tenant_id: string | number) => void;
   setUserInfo: (user_info: any) => void;
   logout: () => void;
+  toggleLoginModal: (status: boolean) => void;
 }
 
 const useUserStore = create<UserStore>()(
@@ -37,6 +38,7 @@ const useUserStore = create<UserStore>()(
       setTenantId: (tenant_id) => set({ tenant_id }),
       setUserInfo: (userInfo) => set({ userInfo }),
       logout: () => set({ username: '', tenant_id: 0, token: '', userInfo: {} }),
+      toggleLoginModal: (status) => set({ showLoginModal: status }),
     }),
     {
       name: 'user-storage',

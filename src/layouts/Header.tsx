@@ -10,7 +10,7 @@ import useUserStore from '@/store/userStore';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 const LoginModalComponent = () => {
-  const [open, setOpen] = useState(false); // 控制对话框的显示与隐藏
+  // const [open, setOpen] = useState(false); // 控制对话框的显示与隐藏
   const [username, setUsername] = useState(''); // 存储账号输入
   const [password, setPassword] = useState(''); // 存储密码输入
   const [captcha, setCaptcha] = useState(''); // 存储验证码
@@ -18,11 +18,12 @@ const LoginModalComponent = () => {
   const [usernameError, setUsernameError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [captchaError, setCaptchaError] = useState('');
-  const { setToken, setUserName, setTenantId, setUserInfo } = useUserStore();
+  const { setToken, setUserName, setTenantId, setUserInfo, showLoginModal, toggleLoginModal } = useUserStore();
 
   // 点击登录按钮打开对话框
   const handleClickOpen = () => {
-    setOpen(true);
+    // setOpen(true);
+    toggleLoginModal(true);
     // getRandomImageFn();
     setUsernameError('');
     setPasswordError('');
@@ -30,7 +31,8 @@ const LoginModalComponent = () => {
   };
   // 点击取消或对话框外部关闭对话框
   const handleClose = () => {
-    setOpen(false);
+    // setOpen(false);
+    toggleLoginModal(false);
     setUsername(''); // 关闭时清空账号
     setPassword(''); // 关闭时清空密码
     setCaptcha('');
@@ -107,7 +109,7 @@ const LoginModalComponent = () => {
       <div className="custom_login_button" onClick={handleClickOpen}>
         登录
       </div>
-      <Dialog open={open} onClose={handleClose}>
+      <Dialog open={showLoginModal} onClose={handleClose}>
         <DialogTitle>账号密码登录</DialogTitle>
         <DialogContent sx={{ width: '400px' }}>
           <TextField
