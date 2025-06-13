@@ -1,306 +1,71 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useVideoList } from '@/api/movies';
+// components/DouyinStyleCarousel.tsx
+import React, { useRef } from 'react';
 
-// --- Constants ---
-// Use a function to get PAGE_HEIGHT in case of window resize if dynamic height is needed.
-// For a fixed height carousel, window.innerHeight at mount is often acceptable.
-// For true responsiveness, consider CSS `100vh` or a resize observer.
-const PAGE_HEIGHT = window.innerHeight;
-const PRELOAD_BUFFER_COUNT = 2; // Number of videos to preload around the current index
-const FETCH_THRESHOLD_FROM_END = 3; // How many videos from the end to trigger next page fetch
-const SCROLL_TRANSITION_DURATION = '0.4s ease-out';
-const INTERSECTION_THRESHOLD = 0.8; // Percentage of target element visibility to trigger callback
+// 导入自定义 Hook
+import { useVideoData } from './hooks/useVideoData';
+import { useCarouselInteraction } from './hooks/useCarouselInteraction';
+import { useVideoPlayback } from './hooks/useVideoPlayback';
 
-// Gesture constants
-const SWIPE_THRESHOLD = 50; // Minimum swipe distance for a navigation
-const VELOCITY_THRESHOLD = 0.3; // Minimum swipe velocity for a navigation
+// --- 常量配置 ---
+const PAGE_HEIGHT_CSS = '100vh';
+const PAGE_HEIGHT_JS = window.innerHeight; // 动态获取实际像素高度
+const PRELOAD_BUFFER_COUNT = 2; // 当前视频前后预加载的视频数量
 
 interface VideoData {
   id: string;
   filePath?: { path: string };
   url?: string;
+  thumbnailPath?: string;
 }
 
 const DouyinStyleCarousel: React.FC = () => {
-  const [videos, setVideos] = useState<VideoData[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-
-  // Use useRef to store isFetching status to avoid it as a useEffect dependency
-  const isFetchingRef = useRef(false);
-
-  // Gesture related state
-  const touchStartY = useRef(0);
-  const touchMoveY = useRef(0);
-  const touchStartTime = useRef(0);
-  const isSwiping = useRef(false); // Indicates if a swipe gesture is active
-
   const containerRef = useRef<HTMLDivElement>(null);
-  const videoRefsMap = useRef<Map<string, HTMLVideoElement>>(new Map());
-  const intersectionObserverRef = useRef<IntersectionObserver | null>(null);
+  const videoRefsMap = useRef<Map<string, HTMLVideoElement>>(new Map()); // 用于存储视频元素引用
 
-  const { response, loading, error, getList } = useVideoList();
+  // 1. 数据加载逻辑
+  const { videos, loading, error, hasMore, loadNextPage, isFetching } = useVideoData({ pageSize: 5 });
 
-  // --- Data Loading Logic ---
-  // Effect to trigger API call when currentPage changes or initially
-  useEffect(() => {
-    // Only fetch if there's more data and not currently fetching
-    if (hasMore && !isFetchingRef.current) {
-      isFetchingRef.current = true; // Mark fetching started
-      console.log(`Initiating request: fetching page ${currentPage} data...`);
-      getList({ pageNo: currentPage, pageSize: 10 });
-    }
-  }, [currentPage]); // Dependencies: currentPage, hasMore, and getList (from useCallback in useVideoList)
-  // currentPage, hasMore, getList
-  // Effect to process API response and update video list
-  useEffect(() => {
-    if (response) {
-      if (response.records && response.records.length > 0) {
-        const newVideoData: VideoData[] = response.records
-          .map((v: any) => {
-            try {
-              // Safely parse filePath if it's a string, otherwise use directly
-              const filePath = typeof v.filePath === 'string' ? JSON.parse(v.filePath) : v.filePath;
-              return {
-                ...v,
-                filePath: filePath,
-                url: filePath?.path, // Assuming 'path' holds the video URL
-              };
-            } catch (e) {
-              console.error('Error parsing filePath field:', e, 'Original data:', v.filePath);
-              return { ...v, filePath: null, url: '' }; // Return a fallback if parsing fails
-            }
-          })
-          .filter((v) => v.url); // Only keep videos with a valid URL
+  // 2. 触摸 & 无限滚动逻辑
+  const { currentIndex } = useCarouselInteraction({
+    totalItems: videos.length,
+    onLoadNextPage: loadNextPage, // 将数据加载的函数传递给交互 Hook
+    hasMore: hasMore,
+    isFetchingData: isFetching,
+    pageHeight: PAGE_HEIGHT_JS,
+    containerRef: containerRef,
+  });
 
-        setVideos((prev) => {
-          const existingIds = new Set(prev.map((video) => video.id));
-          const uniqueNewVideos = newVideoData.filter((video) => !existingIds.has(video.id));
-          return [...prev, ...uniqueNewVideos];
-        });
+  // 3. 视频播放控制
+  useVideoPlayback(videoRefsMap); // 将视频引用Map传递给 Hook
 
-        // Determine if there's more data based on the number of records returned
-        if (response.records.length < 5) {
-          // Assuming pageSize is 5
-          setHasMore(false);
-        }
-      } else {
-        setHasMore(false); // No records returned, so no more data
-      }
-      isFetchingRef.current = false; // Mark fetching complete
-      console.log(`Page ${currentPage} data loaded.`);
-    }
-  }, [response, currentPage]); // Depend on response to trigger update and currentPage for logging
-
-  // --- Video Playback/Pause Logic (Intersection Observer) ---
-  useEffect(() => {
-    // Disconnect previous observer if it exists
-    if (intersectionObserverRef.current) {
-      intersectionObserverRef.current.disconnect();
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          const videoElement = entry.target as HTMLVideoElement;
-          if (entry.isIntersecting) {
-            // Only play if not currently playing to avoid unnecessary calls
-            if (videoElement.paused) {
-              videoElement.play().catch((err) => {
-                console.warn('Video play prevented:', err);
-                // Handle autoplay policy issues or other play errors
-              });
-              videoElement.muted = false; // Unmute the currently playing video
-            }
-          } else {
-            // Pause and reset if not intersecting
-            if (!videoElement.paused) {
-              videoElement.pause();
-              videoElement.currentTime = 0;
-            }
-            videoElement.muted = true; // Mute videos that are out of view
-          }
-        });
-      },
-      { threshold: INTERSECTION_THRESHOLD }
-    );
-
-    // Observe all video elements currently in the map
-    videoRefsMap.current.forEach((videoElement) => {
-      observer.observe(videoElement);
-    });
-
-    intersectionObserverRef.current = observer;
-
-    // Cleanup: Disconnect observer when component unmounts or dependencies change
-    return () => {
-      if (intersectionObserverRef.current) {
-        intersectionObserverRef.current.disconnect();
-      }
-    };
-  }, [videos]); // Re-create observer when video list changes
-
-  // --- Scroll Animation ---
-  useEffect(() => {
-    if (containerRef.current) {
-      if (!isSwiping.current) {
-        // Apply transition only if not actively swiping
-        containerRef.current.style.transition = `transform ${SCROLL_TRANSITION_DURATION}`;
-        containerRef.current.style.transform = `translateY(${-currentIndex * PAGE_HEIGHT}px)`;
-      }
-    }
-    // Removed video play/pause logic from here; it's handled by IntersectionObserver
-  }, [currentIndex]); // Only depend on currentIndex for scroll animation
-
-  // --- Navigation Logic ---
-  const scrollTo = useCallback(
-    (targetIndex: number) => {
-      const newIndex = Math.max(0, Math.min(videos.length - 1, targetIndex));
-
-      if (newIndex !== currentIndex) {
-        setCurrentIndex(newIndex);
-        // When nearing the end of the list, trigger next page load if more data exists
-        if (hasMore && !isFetchingRef.current && videos.length - newIndex <= FETCH_THRESHOLD_FROM_END) {
-          setCurrentPage((prev) => prev + 1); // Increment currentPage to trigger data request
-        }
-      }
-    },
-    [currentIndex, videos.length, hasMore]
-  ); // isFetchingRef.current should not be a dependency here because it's a ref
-
-  // --- Mouse Wheel and Keyboard Navigation ---
-  const handleWheel = useCallback(
-    (e: WheelEvent) => {
-      e.preventDefault(); // Prevent default scroll behavior
-      if (e.deltaY > 0) {
-        scrollTo(currentIndex + 1);
-      } else if (e.deltaY < 0) {
-        scrollTo(currentIndex - 1);
-      }
-    },
-    [currentIndex, scrollTo]
-  );
-
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'ArrowDown') {
-        scrollTo(currentIndex + 1);
-      } else if (e.key === 'ArrowUp') {
-        scrollTo(currentIndex - 1);
-      }
-    },
-    [currentIndex, scrollTo]
-  );
-
-  // --- Gesture Handling Logic ---
-  const handleTouchStart = useCallback((e: TouchEvent) => {
-    isSwiping.current = true;
-    touchStartY.current = e.touches[0].clientY;
-    touchMoveY.current = e.touches[0].clientY; // Initialize touchMoveY
-    touchStartTime.current = Date.now();
-
-    if (containerRef.current) {
-      containerRef.current.style.transition = 'none'; // Remove transition during touch for smooth dragging
-    }
-  }, []);
-
-  const handleTouchMove = useCallback(
-    (e: TouchEvent) => {
-      if (!isSwiping.current) return;
-
-      touchMoveY.current = e.touches[0].clientY;
-      const deltaY = touchMoveY.current - touchStartY.current;
-
-      if (containerRef.current) {
-        const currentTranslateY = -currentIndex * PAGE_HEIGHT;
-        containerRef.current.style.transform = `translateY(${currentTranslateY + deltaY}px)`;
-      }
-    },
-    [currentIndex]
-  );
-
-  const handleTouchEnd = useCallback(() => {
-    isSwiping.current = false;
-
-    const deltaY = touchMoveY.current - touchStartY.current;
-    const deltaTime = Date.now() - touchStartTime.current;
-    const velocity = Math.abs(deltaY / deltaTime);
-
-    let targetIndex = currentIndex;
-
-    // Determine target index based on swipe distance or velocity
-    if (deltaY < -SWIPE_THRESHOLD || (deltaY < 0 && velocity > VELOCITY_THRESHOLD)) {
-      targetIndex = currentIndex + 1; // Swipe up, go to next video
-    } else if (deltaY > SWIPE_THRESHOLD || (deltaY > 0 && velocity > VELOCITY_THRESHOLD)) {
-      targetIndex = currentIndex - 1; // Swipe down, go to previous video
-    }
-
-    scrollTo(targetIndex);
-
-    if (containerRef.current) {
-      // Re-apply transition after swipe ends
-      containerRef.current.style.transition = `transform ${SCROLL_TRANSITION_DURATION}`;
-    }
-  }, [currentIndex, scrollTo]);
-
-  // --- Event Listener Mounting and Cleanup ---
-  useEffect(() => {
-    // Add passive: false to allow e.preventDefault() for wheel and touch events
-    window.addEventListener('wheel', handleWheel, { passive: false });
-    window.addEventListener('keydown', handleKeyDown);
-
-    const carouselElement = document.getElementById('douyin-carousel-container');
-    if (carouselElement) {
-      carouselElement.addEventListener('touchstart', handleTouchStart, { passive: false });
-      carouselElement.addEventListener('touchmove', handleTouchMove, { passive: false });
-      carouselElement.addEventListener('touchend', handleTouchEnd, { passive: false });
-      carouselElement.addEventListener('touchcancel', handleTouchEnd, { passive: false }); // Handle touch cancellation
-    }
-
-    return () => {
-      window.removeEventListener('wheel', handleWheel);
-      window.removeEventListener('keydown', handleKeyDown);
-
-      if (carouselElement) {
-        carouselElement.removeEventListener('touchstart', handleTouchStart);
-        carouselElement.removeEventListener('touchmove', handleTouchMove);
-        carouselElement.removeEventListener('touchend', handleTouchEnd);
-        carouselElement.removeEventListener('touchcancel', handleTouchEnd);
-      }
-    };
-  }, [handleWheel, handleKeyDown, handleTouchStart, handleTouchMove, handleTouchEnd]); // Dependencies are the memoized handlers
-
-  // --- Render Component ---
   return (
     <div
       id="douyin-carousel-container"
       style={{
-        height: '100vh', // Use 100vh for full viewport height
+        height: PAGE_HEIGHT_CSS,
         overflow: 'hidden',
         position: 'relative',
         width: '100%',
         backgroundColor: '#000',
-        touchAction: 'none', // Prevent default browser touch actions
+        touchAction: 'none', // 阻止默认的触摸行为，如iOS下拉刷新
       }}
     >
       <div
         ref={containerRef}
         style={{
-          height: videos.length * PAGE_HEIGHT, // Total height of the scrollable content
+          height: videos.length * PAGE_HEIGHT_JS, // 根据视频数量设置总高度
           width: '100%',
-          // transform is handled by useEffect for smooth scrolling
         }}
       >
         {videos.map((video, index) => {
-          // Conditionally render <video> tag for performance
+          // 根据当前索引和预加载缓冲区决定是否渲染 <video> 标签
           const shouldRenderVideoTag = index >= currentIndex - PRELOAD_BUFFER_COUNT && index <= currentIndex + PRELOAD_BUFFER_COUNT;
 
           return (
             <div
               key={video.id}
               style={{
-                height: PAGE_HEIGHT,
+                height: PAGE_HEIGHT_JS,
                 width: '100%',
                 position: 'relative',
                 overflow: 'hidden',
@@ -309,22 +74,24 @@ const DouyinStyleCarousel: React.FC = () => {
               {video.url && shouldRenderVideoTag ? (
                 <video
                   ref={(el) => {
-                    // Store video element in map, or delete if unmounted
+                    // 将视频元素添加到 Map 中以便 IntersectionObserver 观察
                     if (el) {
                       videoRefsMap.current.set(video.id, el);
                     } else {
-                      videoRefsMap.current.delete(video.id);
+                      videoRefsMap.current.delete(video.id); // 元素卸载时从 Map 中移除
                     }
                   }}
-                  src={video.url}
-                  muted={true} // Start muted, IntersectionObserver will unmute current
+                  poster={video.thumbnailPath}
+                  muted={true} // 初始静音
                   loop
-                  playsInline // Important for mobile autoplay
-                  preload="auto" // Preload metadata and some data
+                  x5-video-player-type="h5-page"
+                  playsInline
+                  preload="auto"
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
+                >
+                  <source src={video.url} type="video/mp4" />
+                </video>
               ) : (
-                // Placeholder for videos not currently rendered or invalid URLs
                 <div
                   style={{
                     width: '100%',
@@ -337,17 +104,17 @@ const DouyinStyleCarousel: React.FC = () => {
                     fontSize: '1.2em',
                   }}
                 >
-                  {shouldRenderVideoTag && !video.url ? 'Video failed to load or invalid path' : 'Video Placeholder'}
+                  {shouldRenderVideoTag && !video.url ? '视频加载失败或路径无效' : '视频占位符'}
                 </div>
               )}
             </div>
           );
         })}
-        {/* Loading indicator */}
+        {/* 加载中提示 */}
         {loading && (
           <div
             style={{
-              height: PAGE_HEIGHT / 2,
+              height: PAGE_HEIGHT_JS,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -355,14 +122,14 @@ const DouyinStyleCarousel: React.FC = () => {
               backgroundColor: '#333',
             }}
           >
-            Loading...
+            加载中...
           </div>
         )}
-        {/* End of list indicator */}
+        {/* 到底提示 */}
         {!hasMore && videos.length > 0 && (
           <div
             style={{
-              height: PAGE_HEIGHT / 2,
+              height: PAGE_HEIGHT_JS / 2, // “到底”消息占据半个屏幕
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -370,7 +137,7 @@ const DouyinStyleCarousel: React.FC = () => {
               backgroundColor: '#333',
             }}
           >
-            You've reached the end!
+            您已到达底部！
           </div>
         )}
       </div>

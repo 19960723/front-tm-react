@@ -27,3 +27,34 @@ export function formatRelativeTime(inputDate: string | number | Date): string {
       .replace(/\//g, '-');
   }
 }
+
+export const throttle = <T extends (...args: any[]) => any>(
+  func: T,
+  limit: number
+): ((this: ThisParameterType<T>, ...args: Parameters<T>) => ReturnType<T> | undefined) => {
+  let inThrottle: boolean;
+  let lastResult: ReturnType<T> | undefined;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  let lastContext: ThisParameterType<T> | undefined; // Stores the correct 'this' context
+  let lastArgs: Parameters<T> | undefined; // Stores the correct arguments
+
+  return function (this: ThisParameterType<T>, ...args: Parameters<T>): ReturnType<T> | undefined {
+    lastContext = this; // Capture the current 'this' context
+    lastArgs = args; // Capture the current arguments
+
+    if (!inThrottle) {
+      inThrottle = true;
+      lastResult = func.apply(lastContext, lastArgs); // Use the captured context and arguments
+      timeoutId = setTimeout(() => {
+        inThrottle = false;
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+      }, limit);
+      return lastResult; // Execute the first time and return the result
+    }
+    // During throttling, don't execute 'func'. Return undefined.
+    return undefined;
+  };
+};
