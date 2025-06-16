@@ -24,3 +24,22 @@
   object-fit: cover;
   pointer-events: none;
 }
+
+.pause-icon {
+  width: 100px;
+  height: 100px;
+  opacity: 0.4;
+  position: absolute;
+  margin: auto;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  color: white;
+  transition: transform 0.6s ease-in;
+}
+.pause-icon:hover {
+  opacity: 0.6;
+  transform: scale(1.2);
+  cursor: pointer;
+}

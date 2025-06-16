@@ -31,7 +31,7 @@ export const useVideoPlayback = (videoRefsMap: React.MutableRefObject<Map<string
                 .play()
                 .then(() => {
                   // 播放成功后取消静音
-                  videoElement.muted = false;
+                  // videoElement.muted = false;
                 })
                 .catch((err) => {
                   console.warn('[useVideoPlayback] Video playback was blocked:', err);
@@ -55,9 +55,10 @@ export const useVideoPlayback = (videoRefsMap: React.MutableRefObject<Map<string
       },
       { threshold: INTERSECTION_THRESHOLD }
     );
-
+    console.log('hahhahah', videoRefsMap.current);
     // 观察所有当前可用的视频元素
     videoRefsMap.current.forEach((videoElement) => {
+      console.log(videoElement, 'videoElement2');
       observer.observe(videoElement);
     });
 

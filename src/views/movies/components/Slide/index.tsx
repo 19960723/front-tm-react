@@ -5,6 +5,8 @@ import React, { useRef } from 'react';
 import { useVideoData } from './hooks/useVideoData';
 import { useCarouselInteraction } from './hooks/useCarouselInteraction';
 import { useVideoPlayback } from './hooks/useVideoPlayback';
+import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded';
+import './douyin.css';
 
 // --- 常量配置 ---
 const PAGE_HEIGHT_CSS = '100vh';
@@ -72,25 +74,30 @@ const DouyinStyleCarousel: React.FC = () => {
               }}
             >
               {video.url && shouldRenderVideoTag ? (
-                <video
-                  ref={(el) => {
-                    // 将视频元素添加到 Map 中以便 IntersectionObserver 观察
-                    if (el) {
-                      videoRefsMap.current.set(video.id, el);
-                    } else {
-                      videoRefsMap.current.delete(video.id); // 元素卸载时从 Map 中移除
-                    }
-                  }}
-                  poster={video.thumbnailPath}
-                  muted={true} // 初始静音
-                  loop
-                  x5-video-player-type="h5-page"
-                  playsInline
-                  preload="auto"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                >
-                  <source src={video.url} type="video/mp4" />
-                </video>
+                <>
+                  <video
+                    ref={(el) => {
+                      // 将视频元素添加到 Map 中以便 IntersectionObserver 观察
+                      if (el) {
+                        videoRefsMap.current.set(video.id, el);
+                      } else {
+                        videoRefsMap.current.delete(video.id); // 元素卸载时从 Map 中移除
+                      }
+                    }}
+                    poster={video.thumbnailPath}
+                    muted={true} // 初始静音
+                    loop
+                    x5-video-player-type="h5-page"
+                    playsInline
+                    preload="auto"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  >
+                    <source src={video.url} type="video/mp4" />
+                  </video>
+                  <div>
+                    <PlayArrowRoundedIcon className="pause-icon" sx={{ transition: 'transform 0.4s ease-in', width: '100px', height: '100px' }} />
+                  </div>
+                </>
               ) : (
                 <div
                   style={{
