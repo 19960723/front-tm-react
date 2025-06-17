@@ -126,6 +126,8 @@ export const useCarouselInteraction = ({
         containerRef.current.style.transition = `transform ${SCROLL_TRANSITION_DURATION}`;
         containerRef.current.style.transform = `translateY(0px)`;
       }
+    } else {
+      if (containerRef.current) containerRef.current.style.transform = `translateY(${-targetIndex * pageHeight}px)`;
     }
     scrollTo(targetIndex);
   }, [currentIndex, scrollTo, containerRef]);

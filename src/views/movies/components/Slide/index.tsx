@@ -1,12 +1,14 @@
 // components/DouyinStyleCarousel.tsx
-import React, { useRef } from 'react';
+import React, { useRef, useMemo, useCallback } from 'react';
 
 // 导入自定义 Hook
 import { useVideoData } from './hooks/useVideoData';
 import { useCarouselInteraction } from './hooks/useCarouselInteraction';
 import { useVideoPlayback } from './hooks/useVideoPlayback';
+import { useVideoControl } from './hooks/useVideoControl';
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded';
 import './douyin.css';
+import LoadingCom from '../Loading/index';
 
 // --- 常量配置 ---
 const PAGE_HEIGHT_CSS = '100vh';
@@ -19,6 +21,173 @@ interface VideoData {
   url?: string;
   thumbnailPath?: string;
 }
+interface VideoPlayerWithControlsProps {
+  video: VideoData;
+  isActive: boolean; // 用于判断是否是当前活跃视频，以决定是否渲染控制UI
+  onVideoRef: (id: string, el: HTMLVideoElement | null) => void; // 用于向父组件传递 video element ref
+}
+
+// 辅助函数：格式化时间，将秒转换为 MM:SS 格式
+const formatTime = (seconds: number) => {
+  if (isNaN(seconds) || seconds < 0) return '00:00';
+  const minutes = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
+
+const VideoPlayerWithControls: React.FC<VideoPlayerWithControlsProps> = ({ video, isActive, onVideoRef }) => {
+  const [videoElement, setVideoElement] = React.useState<HTMLVideoElement | null>(null);
+  const controls = useVideoControl(videoElement);
+
+  const videoRefCallback = useCallback(
+    (el: HTMLVideoElement | null) => {
+      setVideoElement(el); // 设置内部 state
+      onVideoRef(video.id, el); // 通知父组件
+    },
+    [video.id, onVideoRef]
+  );
+  return (
+    <div
+      style={{
+        width: '100%',
+        height: '100%', // 由父级 DouyinStyleCarousel 的 div 控制高度
+        position: 'relative',
+        overflow: 'hidden',
+        backgroundColor: '#000', // 默认黑色背景
+      }}
+      onClick={isActive ? controls.togglePlay : undefined}
+    >
+      <video
+        ref={videoRefCallback} // 使用组合的 ref 回调
+        poster={video.thumbnailPath}
+        muted={true} // 初始静音
+        loop
+        x5-video-player-type="h5-page"
+        playsInline
+        preload="auto"
+        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+      >
+        <source src={video.url} type="video/mp4" />
+      </video>
+      {/* <div>
+      <PlayArrowRoundedIcon className="pause-icon" sx={{ transition: 'transform 0.4s ease-in', width: '100px', height: '100px' }} />
+    </div> */}
+      {isActive && (
+        <>
+          {!controls.isPlaying && (
+            <PlayArrowRoundedIcon className="pause-icon" sx={{ transition: 'transform 0.4s ease-in', width: '100px', height: '100px' }} />
+          )}
+        </>
+      )}
+
+      {false && isActive && controls && controls.togglePlay && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '20px',
+            left: '20px',
+            right: '20px',
+            zIndex: 10,
+            color: 'white',
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            padding: '10px',
+            borderRadius: '8px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+            alignItems: 'center',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* 播放/暂停按钮 */}
+          <button
+            style={{
+              background: 'none',
+              border: '2px solid white',
+              borderRadius: '50%',
+              color: 'white',
+              fontSize: '30px',
+              width: '60px',
+              height: '60px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+            }}
+          >
+            {controls.isPlaying ? '❚❚' : '▶'}
+          </button>
+
+          {/* 进度条 */}
+          <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span>{formatTime(controls.currentTime)}</span>
+            <input
+              type="range"
+              min="0"
+              max={controls.duration}
+              value={controls.currentTime}
+              onChange={(e) => {
+                controls.seek(parseFloat(e.target.value));
+              }}
+              onMouseUp={controls.endSeek}
+              onTouchEnd={controls.endSeek}
+              style={{ flexGrow: 1, height: '4px', background: '#ccc', borderRadius: '2px', cursor: 'pointer' }}
+            />
+            <span>{formatTime(controls.duration)}</span>
+          </div>
+
+          {/* 音量控制 */}
+          <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button
+              onClick={controls.toggleMute}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'white',
+                fontSize: '24px',
+                cursor: 'pointer',
+                padding: 0,
+              }}
+            >
+              {controls.isMuted ? '🔇' : '🔊'}
+            </button>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={controls.volume}
+              onChange={(e) => controls.setVolume(parseFloat(e.target.value))}
+              style={{ flexGrow: 1, height: '4px', background: '#ccc', borderRadius: '2px', cursor: 'pointer' }}
+            />
+          </div>
+
+          {/* 播放速度控制 */}
+          <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span>速度:</span>
+            <select
+              value={controls.playbackRate}
+              onChange={(e) => controls.setPlaybackRate(parseFloat(e.target.value))}
+              style={{
+                background: 'rgba(255,255,255,0.2)',
+                color: 'white',
+                border: '1px solid #ccc',
+                padding: '5px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="0.5">0.5x</option>
+              <option value="1">1x</option>
+              <option value="1.5">1.5x</option>
+              <option value="2">2x</option>
+            </select>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const DouyinStyleCarousel: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -39,6 +208,15 @@ const DouyinStyleCarousel: React.FC = () => {
 
   // 3. 视频播放控制
   useVideoPlayback(videoRefsMap); // 将视频引用Map传递给 Hook
+
+  // 视频 ref 注册回调函数，传递给子组件
+  const handleVideoRef = useCallback((id: string, el: HTMLVideoElement | null) => {
+    if (el) {
+      videoRefsMap.current.set(id, el);
+    } else {
+      videoRefsMap.current.delete(id);
+    }
+  }, []);
 
   return (
     <div
@@ -74,30 +252,7 @@ const DouyinStyleCarousel: React.FC = () => {
               }}
             >
               {video.url && shouldRenderVideoTag ? (
-                <>
-                  <video
-                    ref={(el) => {
-                      // 将视频元素添加到 Map 中以便 IntersectionObserver 观察
-                      if (el) {
-                        videoRefsMap.current.set(video.id, el);
-                      } else {
-                        videoRefsMap.current.delete(video.id); // 元素卸载时从 Map 中移除
-                      }
-                    }}
-                    poster={video.thumbnailPath}
-                    muted={true} // 初始静音
-                    loop
-                    x5-video-player-type="h5-page"
-                    playsInline
-                    preload="auto"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  >
-                    <source src={video.url} type="video/mp4" />
-                  </video>
-                  <div>
-                    <PlayArrowRoundedIcon className="pause-icon" sx={{ transition: 'transform 0.4s ease-in', width: '100px', height: '100px' }} />
-                  </div>
-                </>
+                <VideoPlayerWithControls video={video} isActive={index === currentIndex} onVideoRef={handleVideoRef} />
               ) : (
                 <div
                   style={{
@@ -117,37 +272,24 @@ const DouyinStyleCarousel: React.FC = () => {
             </div>
           );
         })}
-        {/* 加载中提示 */}
-        {loading && (
-          <div
-            style={{
-              height: PAGE_HEIGHT_JS,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#fff',
-              backgroundColor: '#333',
-            }}
-          >
-            加载中...
-          </div>
-        )}
-        {/* 到底提示 */}
-        {!hasMore && videos.length > 0 && (
-          <div
-            style={{
-              height: PAGE_HEIGHT_JS / 2, // “到底”消息占据半个屏幕
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#fff',
-              backgroundColor: '#333',
-            }}
-          >
-            您已到达底部！
-          </div>
-        )}
       </div>
+      {/* 到底提示 */}
+      {!hasMore && videos.length > 0 && (
+        <div
+          style={{
+            height: PAGE_HEIGHT_JS / 2, // “到底”消息占据半个屏幕
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#fff',
+            backgroundColor: '#333',
+          }}
+        >
+          您已到达底部！
+        </div>
+      )}
+      {/* 加载中提示 */}
+      {loading && <LoadingCom />}
     </div>
   );
 };
