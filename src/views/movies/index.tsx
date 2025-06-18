@@ -1,14 +1,20 @@
+import { useRef } from 'react';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { Box } from '@mui/material';
-import DouyinScroll from './components/Slide/index';
+import DouyinStyleCarousel, { DouyinScrollRefType } from './components/Slide/index';
 const MoviesPage = () => {
-  const prevHandler = () => {};
-  const nextHandler = () => {};
+  const DouyinScrollRef = useRef<DouyinScrollRefType>(null);
+  const prevHandler = () => {
+    DouyinScrollRef.current?.prevHandler();
+  };
+  const nextHandler = () => {
+    DouyinScrollRef.current?.nextHandler();
+  };
   return (
     <div className="w-full h-screen flex bg-[#161823]">
       <div className="flex-1">
-        <DouyinScroll />
+        <DouyinStyleCarousel ref={DouyinScrollRef} />
       </div>
       <div className="w-[75px] h-full hidden sm:block">
         <div className="w-full h-full flex justify-center items-center">

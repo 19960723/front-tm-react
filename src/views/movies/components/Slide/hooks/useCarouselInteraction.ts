@@ -120,6 +120,9 @@ export const useCarouselInteraction = ({
     // 根据滑动距离或速度判断导航方向
     if (deltaY < -SWIPE_THRESHOLD || (deltaY < 0 && velocity > VELOCITY_THRESHOLD)) {
       targetIndex = currentIndex + 1; // 向上滑动（显示下一个视频）
+      if (totalItems == targetIndex && containerRef.current) {
+        containerRef.current.style.transform = `translateY(${-currentIndex * pageHeight}px)`;
+      }
     } else if (deltaY > SWIPE_THRESHOLD || (deltaY > 0 && velocity > VELOCITY_THRESHOLD)) {
       targetIndex = currentIndex - 1; // 向下滑动（显示上一个视频）
       if (currentIndex === 0 && containerRef.current) {
@@ -155,6 +158,13 @@ export const useCarouselInteraction = ({
     }, THROTTLE_INTERVAL),
     [currentIndex, scrollTo]
   );
+  const goToNext = useCallback(() => {
+    scrollTo(currentIndex + 1);
+  }, [currentIndex, scrollTo]);
+
+  const goToPrev = useCallback(() => {
+    scrollTo(currentIndex - 1);
+  }, [currentIndex, scrollTo]);
 
   // 绑定全局和容器事件
   useEvent(window, 'wheel', throttledHandleWheel, { passive: false });
@@ -164,5 +174,5 @@ export const useCarouselInteraction = ({
   useEvent(containerRef, 'touchend', handleTouchEnd, { passive: false });
   useEvent(containerRef, 'touchcancel', handleTouchEnd, { passive: false });
 
-  return { currentIndex };
+  return { currentIndex, goToNext, goToPrev };
 };

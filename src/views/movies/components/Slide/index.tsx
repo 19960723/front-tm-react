@@ -1,5 +1,5 @@
 // components/DouyinStyleCarousel.tsx
-import React, { useRef, useMemo, useCallback } from 'react';
+import React, { useImperativeHandle, forwardRef, useRef, useMemo, useCallback } from 'react';
 
 // 导入自定义 Hook
 import { useVideoData } from './hooks/useVideoData';
@@ -9,6 +9,7 @@ import { useVideoControl } from './hooks/useVideoControl';
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded';
 import './douyin.css';
 import LoadingCom from '../Loading/index';
+import { _duration } from '@/utils';
 
 // --- 常量配置 ---
 const PAGE_HEIGHT_CSS = '100vh';
@@ -20,7 +21,12 @@ interface VideoData {
   filePath?: { path: string };
   url?: string;
   thumbnailPath?: string;
+  path_cover?: string;
 }
+export type DouyinScrollRefType = {
+  prevHandler: () => void;
+  nextHandler: () => void;
+};
 interface VideoPlayerWithControlsProps {
   video: VideoData;
   isActive: boolean; // 用于判断是否是当前活跃视频，以决定是否渲染控制UI
@@ -33,6 +39,32 @@ const formatTime = (seconds: number) => {
   const minutes = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
+
+const VideoControls: React.FC = () => {
+  const isPlaying = false;
+  const currentTime = 0;
+  const duration = 0;
+  const isFullScreen = false;
+
+  return (
+    <div>
+      进度条
+      <div></div>
+      <div className="flex flex-between items-center justify-between pl-[10px] pr-[10px]">
+        <div className="flex items-center">
+          <i className={`fas text-[18px] p-[10px] cursor-pointer ${isPlaying ? 'fa-pause' : 'fa-play'}`} />
+          <span className="text-[14px] p-[10px]">
+            {_duration(currentTime)} / {_duration(duration)}
+          </span>
+        </div>
+        <div className="flex">
+          <i className={`fas text-[24px] p-[10px] cursor-pointer muted ? 'fa-volume-mute' : 'fa-volume-off'`} />
+          <i className={`far text-[24px] p-[10px] cursor-pointer ${isFullScreen ? 'fa-expand' : 'fa-compress'}`} />
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const VideoPlayerWithControls: React.FC<VideoPlayerWithControlsProps> = ({ video, isActive, onVideoRef }) => {
@@ -48,35 +80,36 @@ const VideoPlayerWithControls: React.FC<VideoPlayerWithControlsProps> = ({ video
   );
   return (
     <div
+      className="flex justify-center"
       style={{
         width: '100%',
         height: '100%', // 由父级 DouyinStyleCarousel 的 div 控制高度
         position: 'relative',
         overflow: 'hidden',
-        backgroundColor: '#000', // 默认黑色背景
       }}
       onClick={isActive ? controls.togglePlay : undefined}
     >
-      <video
-        ref={videoRefCallback} // 使用组合的 ref 回调
-        poster={video.thumbnailPath}
-        muted={true} // 初始静音
-        loop
-        x5-video-player-type="h5-page"
-        playsInline
-        preload="auto"
-        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-      >
-        <source src={video.url} type="video/mp4" />
-      </video>
-      {/* <div>
-      <PlayArrowRoundedIcon className="pause-icon" sx={{ transition: 'transform 0.4s ease-in', width: '100px', height: '100px' }} />
-    </div> */}
+      <>
+        <div className="video_bg hidden sm:block" style={{ backgroundImage: `url(${video.path_cover})` }}></div>
+        <video
+          ref={videoRefCallback} // 使用组合的 ref 回调
+          poster={video.thumbnailPath}
+          muted={true} // 初始静音
+          loop
+          x5-video-player-type="h5-page"
+          playsInline
+          preload="auto"
+          style={{ height: '100%' }}
+        >
+          <source src={video.url} type="video/mp4" />
+        </video>
+      </>
       {isActive && (
         <>
           {!controls.isPlaying && (
             <PlayArrowRoundedIcon className="pause-icon" sx={{ transition: 'transform 0.4s ease-in', width: '100px', height: '100px' }} />
           )}
+          <VideoControls />
         </>
       )}
 
@@ -189,7 +222,7 @@ const VideoPlayerWithControls: React.FC<VideoPlayerWithControlsProps> = ({ video
   );
 };
 
-const DouyinStyleCarousel: React.FC = () => {
+const DouyinStyleCarousel = forwardRef<DouyinScrollRefType>((props, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRefsMap = useRef<Map<string, HTMLVideoElement>>(new Map()); // 用于存储视频元素引用
 
@@ -197,7 +230,7 @@ const DouyinStyleCarousel: React.FC = () => {
   const { videos, loading, error, hasMore, loadNextPage, isFetching } = useVideoData({ pageSize: 5 });
 
   // 2. 触摸 & 无限滚动逻辑
-  const { currentIndex } = useCarouselInteraction({
+  const { currentIndex, goToNext, goToPrev } = useCarouselInteraction({
     totalItems: videos.length,
     onLoadNextPage: loadNextPage, // 将数据加载的函数传递给交互 Hook
     hasMore: hasMore,
@@ -207,7 +240,7 @@ const DouyinStyleCarousel: React.FC = () => {
   });
 
   // 3. 视频播放控制
-  useVideoPlayback(videoRefsMap); // 将视频引用Map传递给 Hook
+  useVideoPlayback(videoRefsMap, videos.length); // 将视频引用Map传递给 Hook
 
   // 视频 ref 注册回调函数，传递给子组件
   const handleVideoRef = useCallback((id: string, el: HTMLVideoElement | null) => {
@@ -218,6 +251,10 @@ const DouyinStyleCarousel: React.FC = () => {
     }
   }, []);
 
+  useImperativeHandle(ref, () => ({
+    prevHandler: () => goToPrev(),
+    nextHandler: () => goToNext(),
+  }));
   return (
     <div
       id="douyin-carousel-container"
@@ -292,6 +329,6 @@ const DouyinStyleCarousel: React.FC = () => {
       {loading && <LoadingCom />}
     </div>
   );
-};
+});
 
 export default DouyinStyleCarousel;

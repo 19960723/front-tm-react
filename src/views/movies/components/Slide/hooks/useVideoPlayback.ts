@@ -10,15 +10,19 @@ const INTERSECTION_THRESHOLD = 0.8; // 视频可见性达到80%时触发播放/�
  *
  * @param videoRefsMap 一个 Map，存储视频ID和对应的HTMLVideoElement引用。
  */
-export const useVideoPlayback = (videoRefsMap: React.MutableRefObject<Map<string, HTMLVideoElement>>) => {
+export const useVideoPlayback = (videoRefsMap: React.MutableRefObject<Map<string, HTMLVideoElement>>, videoCount: number) => {
   const intersectionObserverRef = useRef<IntersectionObserver | null>(null);
 
   useEffect(() => {
     // 如果存在旧的观察器，先断开连接
     if (intersectionObserverRef.current) {
       intersectionObserverRef.current.disconnect();
+      intersectionObserverRef.current = null; // 清除旧的引用
     }
-
+    if (videoRefsMap.current.size === 0) {
+      console.log('[useVideoPlayback] videoRefsMap is empty, no observer created.');
+      return;
+    }
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -55,10 +59,8 @@ export const useVideoPlayback = (videoRefsMap: React.MutableRefObject<Map<string
       },
       { threshold: INTERSECTION_THRESHOLD }
     );
-    console.log('hahhahah', videoRefsMap.current);
     // 观察所有当前可用的视频元素
     videoRefsMap.current.forEach((videoElement) => {
-      console.log(videoElement, 'videoElement2');
       observer.observe(videoElement);
     });
 
@@ -67,7 +69,8 @@ export const useVideoPlayback = (videoRefsMap: React.MutableRefObject<Map<string
     return () => {
       if (intersectionObserverRef.current) {
         intersectionObserverRef.current.disconnect();
+        intersectionObserverRef.current = null;
       }
     };
-  }, [videoRefsMap.current]); // 当视频引用Map发生变化时（例如添加新视频），重新运行效果
+  }, [videoRefsMap.current, videoCount]); // 当视频引用Map发生变化时（例如添加新视频），重新运行效果
 };

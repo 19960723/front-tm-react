@@ -7,6 +7,7 @@ interface VideoData {
   filePath?: { path: string };
   url?: string;
   thumbnailPath?: string;
+  path_cover?: string;
 }
 
 interface UseVideoDataOptions {
@@ -49,10 +50,11 @@ export const useVideoData = ({ pageSize = 5 }: UseVideoDataOptions = {}) => {
                 ...v,
                 filePath: filePath,
                 url: filePath?.path,
+                path_cover: filePath?.path_cover,
               };
             } catch (e) {
               console.error('[useVideoData] Error parsing filePath field:', e, 'Raw data:', v.filePath);
-              return { ...v, filePath: null, url: '' };
+              return { ...v, filePath: null, url: '', path_cover: '' };
             }
           })
           .filter((v: any) => v.url); // 过滤掉无效 URL 的视频
