@@ -5,6 +5,26 @@ import { useState, useEffect, useCallback, useRef } from 'react';
  * 为单个 HTMLVideoElement 提供播放、暂停、进度、音量、播放速度等控制和状态。
  * @param videoElement HTMLVideoElement 引用。
  */
+export interface VideoControlsProps {
+  // 稳定函数 props
+  play?: () => Promise<void> | undefined;
+  pause?: () => void;
+  togglePlay?: () => void;
+  seek?: (time: number) => void;
+  endSeek?: () => void;
+  setVolume?: (vol: number) => void;
+  toggleMute?: () => void;
+  setMuted?: (muted: boolean) => void;
+  setPlaybackRate?: (rate: number) => void;
+  // 频繁变化的状态 props
+  isPlaying?: boolean;
+  currentTime?: number;
+  duration?: number;
+  volume?: number;
+  isMuted?: boolean;
+  playbackRate?: number;
+}
+
 export const useVideoControl = (videoElement: HTMLVideoElement | null) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -144,7 +164,6 @@ export const useVideoControl = (videoElement: HTMLVideoElement | null) => {
       setIsMuted(videoElement.muted); // 立即更新状态
     }
   }, [videoElement]);
-
   const setPlaybackRate = useCallback(
     (rate: number) => {
       if (videoElement) {

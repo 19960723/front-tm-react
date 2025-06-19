@@ -5,8 +5,15 @@ import React, { useImperativeHandle, forwardRef, useRef, useMemo, useCallback } 
 import { useVideoData } from './hooks/useVideoData';
 import { useCarouselInteraction } from './hooks/useCarouselInteraction';
 import { useVideoPlayback } from './hooks/useVideoPlayback';
-import { useVideoControl } from './hooks/useVideoControl';
+import { useVideoControl, VideoControlsProps } from './hooks/useVideoControl';
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded';
+import PauseRoundedIcon from '@mui/icons-material/PauseRounded';
+import VolumeUpRoundedIcon from '@mui/icons-material/VolumeUpRounded';
+import VolumeOffRoundedIcon from '@mui/icons-material/VolumeOffRounded';
+import FullscreenExitRoundedIcon from '@mui/icons-material/FullscreenExitRounded';
+import FullscreenRoundedIcon from '@mui/icons-material/FullscreenRounded';
+import { Box, Slider } from '@mui/material';
+
 import './douyin.css';
 import LoadingCom from '../Loading/index';
 import { _duration } from '@/utils';
@@ -23,6 +30,7 @@ interface VideoData {
   thumbnailPath?: string;
   path_cover?: string;
 }
+
 export type DouyinScrollRefType = {
   prevHandler: () => void;
   nextHandler: () => void;
@@ -41,31 +49,69 @@ const formatTime = (seconds: number) => {
   return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 };
 
-const VideoControls: React.FC = () => {
-  const isPlaying = false;
+const VideoControls: React.FC<VideoControlsProps> = React.memo((props) => {
   const currentTime = 0;
   const duration = 0;
   const isFullScreen = false;
-
+  const { isPlaying, isMuted, togglePlay, toggleMute } = props;
   return (
-    <div>
-      进度条
-      <div></div>
-      <div className="flex flex-between items-center justify-between pl-[10px] pr-[10px]">
+    <div onClick={(e) => e.stopPropagation()}>
+      <div>
+        <Slider
+          aria-label="time-indicator"
+          size="small"
+          defaultValue={50}
+          valueLabelDisplay="auto"
+          sx={(t) => ({
+            color: '#fff',
+            height: 4,
+            '& .MuiSlider-thumb': {
+              width: 8,
+              height: 8,
+              transition: '0.3s cubic-bezier(.47,1.64,.41,.8)',
+              backgroundColor: '#fff',
+              '&::before': {
+                boxShadow: '0 2px 12px 0 rgba(0,0,0,0.4)',
+              },
+              '&:hover, &.Mui-focusVisible': {
+                boxShadow: `0px 0px 0px 8px ${'rgb(0 0 0 / 16%)'}`,
+                ...t.applyStyles('dark', {
+                  boxShadow: `0px 0px 0px 8px ${'rgb(255 255 255 / 16%)'}`,
+                }),
+              },
+              '&.Mui-active': {
+                width: 20,
+                height: 20,
+              },
+            },
+            '& .MuiSlider-rail': {
+              opacity: 0.28,
+            },
+            ...t.applyStyles('dark', {
+              color: '#fff',
+            }),
+          })}
+        />
+      </div>
+      <div className="flex flex-between items-center justify-between pl-[10px] pr-[10px] text-white">
         <div className="flex items-center">
-          <i className={`fas text-[18px] p-[10px] cursor-pointer ${isPlaying ? 'fa-pause' : 'fa-play'}`} />
+          <Box className={`fas text-[18px] p-[10px] cursor-pointer`} onClick={togglePlay}>
+            {isPlaying ? <PauseRoundedIcon /> : <PlayArrowRoundedIcon />}
+          </Box>
           <span className="text-[14px] p-[10px]">
             {_duration(currentTime)} / {_duration(duration)}
           </span>
         </div>
         <div className="flex">
-          <i className={`fas text-[24px] p-[10px] cursor-pointer muted ? 'fa-volume-mute' : 'fa-volume-off'`} />
-          <i className={`far text-[24px] p-[10px] cursor-pointer ${isFullScreen ? 'fa-expand' : 'fa-compress'}`} />
+          <Box className="fas text-[18px] p-[10px] cursor-pointer" onClick={toggleMute}>
+            {isMuted ? <VolumeUpRoundedIcon /> : <VolumeOffRoundedIcon />}
+          </Box>
+          <Box className="fas text-[18px] p-[10px] cursor-pointer">{isFullScreen ? <FullscreenRoundedIcon /> : <FullscreenExitRoundedIcon />}</Box>
         </div>
       </div>
     </div>
   );
-};
+});
 
 const VideoPlayerWithControls: React.FC<VideoPlayerWithControlsProps> = ({ video, isActive, onVideoRef }) => {
   const [videoElement, setVideoElement] = React.useState<HTMLVideoElement | null>(null);
@@ -104,12 +150,21 @@ const VideoPlayerWithControls: React.FC<VideoPlayerWithControlsProps> = ({ video
           <source src={video.url} type="video/mp4" />
         </video>
       </>
-      {isActive && (
+      {isActive && controls && (
         <>
           {!controls.isPlaying && (
             <PlayArrowRoundedIcon className="pause-icon" sx={{ transition: 'transform 0.4s ease-in', width: '100px', height: '100px' }} />
           )}
-          <VideoControls />
+          {
+            <Box className="absolute bottom-0 left-0 w-full ">
+              <VideoControls
+                isPlaying={controls.isPlaying}
+                isMuted={controls.isMuted}
+                togglePlay={controls.togglePlay}
+                toggleMute={controls.toggleMute}
+              />
+            </Box>
+          }
         </>
       )}
 
