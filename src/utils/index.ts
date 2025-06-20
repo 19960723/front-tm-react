@@ -59,26 +59,21 @@ export const throttle = <T extends (...args: any[]) => any>(
   };
 };
 
-export const _duration = (v: number) => {
-  if (!v) return '00:00';
-  const m = Math.floor(v / 60);
-  // let s = v % 60
-  const s = Math.round(v % 60);
-  let str: string = '';
-  if (m === 0) {
-    str = '00';
-  } else if (m > 0 && m < 10) {
-    str = '0' + m;
-  } else {
-    str = m + '';
-  }
-  str += ':';
-  if (s === 0) {
-    str += '00';
-  } else if (s > 0 && s < 10) {
-    str += '0' + s;
-  } else {
-    str += s;
-  }
-  return str;
+export const _duration = (seconds: number) => {
+  if (isNaN(seconds) || seconds < 0) return '00:00';
+  const minutes = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 };
+
+export function setFullScreen(element: any) {
+  if (element.requestFullscreen) {
+    element.requestFullscreen();
+  } else if (element.mozRequestFullScreen) {
+    element.mozRequestFullScreen();
+  } else if (element.webkitRequestFullScreen) {
+    element.webkitRequestFullScreen();
+  } else if (element.msRequestFullscreen) {
+    element.msRequestFullscreen();
+  }
+}

@@ -1,179 +1,215 @@
 // src/hooks/useVideoControl.ts
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
-/**
- * 为单个 HTMLVideoElement 提供播放、暂停、进度、音量、播放速度等控制和状态。
- * @param videoElement HTMLVideoElement 引用。
- */
-export interface VideoControlsProps {
-  // 稳定函数 props
-  play?: () => Promise<void> | undefined;
-  pause?: () => void;
-  togglePlay?: () => void;
-  seek?: (time: number) => void;
-  endSeek?: () => void;
-  setVolume?: (vol: number) => void;
-  toggleMute?: () => void;
-  setMuted?: (muted: boolean) => void;
-  setPlaybackRate?: (rate: number) => void;
-  // 频繁变化的状态 props
-  isPlaying?: boolean;
-  currentTime?: number;
-  duration?: number;
-  volume?: number;
-  isMuted?: boolean;
-  playbackRate?: number;
+// --- 导出 Hook 返回值的类型 ---
+export interface UseVideoControlReturn {
+  isPlaying: boolean;
+  currentTime: number;
+  duration: number;
+  volume: number;
+  isMuted: boolean;
+  playbackRate: number;
+  play: () => Promise<void> | undefined;
+  pause: () => void;
+  togglePlay: () => void;
+  seek: (time: number) => void;
+  endSeek: () => void;
+  setVolume: (vol: number) => void;
+  toggleMute: () => void;
+  setMuted: (muted: boolean) => void;
+  setPlaybackRate: (rate: number) => void;
 }
+// --- 导出 Hook 返回值的类型 ---
 
-export const useVideoControl = (videoElement: HTMLVideoElement | null) => {
+export const useVideoControl = (
+  videoElement: HTMLVideoElement | null // videoElement can be null initially
+): UseVideoControlReturn => {
+  // 1. All useState, useRef, useCallback, useEffect calls MUST be at the top level and unconditional.
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolumeState] = useState(1); // 0 to 1
+  const [volume, setVolumeState] = useState(1);
   const [isMuted, setIsMuted] = useState(true); // 默认静音
-  const [playbackRate, setPlaybackRateState] = useState(1); // 新增状态：播放速度
+  const [playbackRate, setPlaybackRateState] = useState(1);
 
-  const isSeeking = useRef(false); // 避免在拖动进度条时频繁更新
+  const isSeeking = useRef(false);
+  const userVolume = useRef(1);
 
-  useEffect(() => {
-    if (!videoElement) return;
+  // Define noop functions once, unconditionally.
+  const noop = useCallback(() => {}, []);
+  const noopAsync = useCallback(async () => {}, []);
+  const noopSet = useCallback((val: any) => {}, []);
 
-    const updateState = () => {
-      setIsPlaying(!videoElement.paused);
-      setCurrentTime(videoElement.currentTime);
-      setDuration(videoElement.duration || 0);
+  // 2. Define all callback functions unconditionally. Their logic can be conditional.
+  const togglePlay = useCallback(() => {
+    if (!videoElement) return; // Add null check inside the function's logic
+    if (isPlaying) {
+      videoElement.pause();
+    } else {
+      videoElement.play().catch((error) => {
+        console.error('Video play failed:', error);
+        if (error.name === 'NotAllowedError' && !videoElement.muted) {
+          videoElement.muted = true;
+          videoElement
+            .play()
+            .then(() => {
+              console.log('Auto-played muted due to browser policy.');
+            })
+            .catch((subError) => {
+              console.error('Muted play also failed:', subError);
+            });
+        }
+      });
+    }
+  }, [isPlaying, videoElement]);
+
+  const play = useCallback(async () => {
+    // Keep async
+    if (!videoElement) return; // Add null check inside the function's logic
+    if (videoElement.paused) {
+      await videoElement.play().catch((error) => {
+        console.error('Video play failed (explicit call):', error);
+        if (error.name === 'NotAllowedError' && !videoElement.muted) {
+          videoElement.muted = true;
+          videoElement.play();
+        }
+      });
+    }
+  }, [videoElement]);
+
+  const pause = useCallback(() => {
+    if (!videoElement) return; // Add null check inside the function's logic
+    if (!videoElement.paused) {
+      videoElement.pause();
+    }
+  }, [videoElement]);
+
+  const seek = useCallback((time: number) => {
+    // No videoElement check needed here, as setCurrentTime is always safe.
+    setCurrentTime(time);
+    isSeeking.current = true;
+  }, []);
+
+  const endSeek = useCallback(() => {
+    if (videoElement) {
+      // Add null check here before accessing videoElement
+      videoElement.currentTime = currentTime;
+    }
+    isSeeking.current = false;
+  }, [videoElement, currentTime]);
+
+  const setVolume = useCallback(
+    (vol: number) => {
+      if (!videoElement) return; // Add null check
+      videoElement.volume = vol;
+      setVolumeState(vol);
+      if (vol > 0 && isMuted) {
+        setIsMuted(false);
+      }
+      if (vol === 0 && !isMuted) {
+        setIsMuted(true);
+      }
+      userVolume.current = vol;
+    },
+    [videoElement, isMuted]
+  );
+
+  const toggleMute = useCallback(() => {
+    if (!videoElement) return; // Add null check
+    const newMutedState = !isMuted;
+    videoElement.muted = newMutedState;
+    setIsMuted(newMutedState);
+    if (!newMutedState) {
+      videoElement.volume = userVolume.current > 0 ? userVolume.current : 1;
       setVolumeState(videoElement.volume);
-      setIsMuted(videoElement.muted);
-      setPlaybackRateState(videoElement.playbackRate); // 初始化播放速度状态
-    };
+    } else {
+      setVolumeState(0);
+    }
+  }, [isMuted, videoElement]);
+
+  const setMuted = useCallback(
+    (muted: boolean) => {
+      if (!videoElement) return; // Add null check
+      videoElement.muted = muted;
+      setIsMuted(muted);
+      if (!muted) {
+        videoElement.volume = userVolume.current > 0 ? userVolume.current : 1;
+        setVolumeState(videoElement.volume);
+      } else {
+        setVolumeState(0);
+      }
+    },
+    [videoElement]
+  );
+
+  const setPlaybackRate = useCallback(
+    (rate: number) => {
+      if (!videoElement) return; // Add null check
+      videoElement.playbackRate = rate;
+      setPlaybackRateState(rate);
+    },
+    [videoElement]
+  );
+
+  // 3. useEffect must also be called unconditionally.
+  useEffect(() => {
+    // Perform checks for videoElement inside the effect's callback.
+    if (!videoElement) return;
 
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
+
     const handleTimeUpdate = () => {
       if (!isSeeking.current) {
         setCurrentTime(videoElement.currentTime);
       }
     };
+
     const handleLoadedMetadata = () => {
       setDuration(videoElement.duration);
-      updateState(); // 确保加载元数据后更新所有状态
+      setVolumeState(videoElement.volume);
+      setIsMuted(videoElement.muted);
+      setPlaybackRateState(videoElement.playbackRate);
     };
     const handleVolumeChange = () => {
       setVolumeState(videoElement.volume);
       setIsMuted(videoElement.muted);
+      if (!videoElement.muted) {
+        userVolume.current = videoElement.volume;
+      }
     };
-    const handleRateChange = () => {
-      // 新增事件处理：播放速度变化
-      setPlaybackRateState(videoElement.playbackRate);
-    };
-    const handleEnded = () => {
-      // 新增事件处理：视频播放结束
-      setIsPlaying(false);
-    };
+    const handleRateChange = () => setPlaybackRateState(videoElement.playbackRate);
 
-    // 添加事件监听器
     videoElement.addEventListener('play', handlePlay);
     videoElement.addEventListener('pause', handlePause);
     videoElement.addEventListener('timeupdate', handleTimeUpdate);
     videoElement.addEventListener('loadedmetadata', handleLoadedMetadata);
     videoElement.addEventListener('volumechange', handleVolumeChange);
     videoElement.addEventListener('ratechange', handleRateChange);
-    videoElement.addEventListener('ended', handleEnded);
 
-    // 初始化状态
-    updateState();
+    // Initialize state, but only if videoElement is available.
+    setIsPlaying(!videoElement.paused);
+    setCurrentTime(videoElement.currentTime);
+    setDuration(videoElement.duration);
+    setVolumeState(videoElement.volume);
+    setIsMuted(videoElement.muted);
+    setPlaybackRateState(videoElement.playbackRate);
 
     return () => {
-      // 清理事件监听器
-      videoElement.removeEventListener('play', handlePlay);
-      videoElement.removeEventListener('pause', handlePause);
-      videoElement.removeEventListener('timeupdate', handleTimeUpdate);
-      videoElement.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      videoElement.removeEventListener('volumechange', handleVolumeChange);
-      videoElement.removeEventListener('ratechange', handleRateChange);
-      videoElement.removeEventListener('ended', handleEnded);
+      // Cleanup only if videoElement was available for adding listeners.
+      if (videoElement) {
+        videoElement.removeEventListener('play', handlePlay);
+        videoElement.removeEventListener('pause', handlePause);
+        videoElement.removeEventListener('timeupdate', handleTimeUpdate);
+        videoElement.removeEventListener('loadedmetadata', handleLoadedMetadata);
+        videoElement.removeEventListener('volumechange', handleVolumeChange);
+        videoElement.removeEventListener('ratechange', handleRateChange);
+      }
     };
-  }, [videoElement]);
+  }, [videoElement, isSeeking]); // Dependencies are fine as they are.
 
-  const play = useCallback(() => {
-    if (videoElement) {
-      // 尝试播放时，先尝试解除静音。如果浏览器策略不允许，会保持静音或暂停
-      if (isMuted) {
-        // 只有在当前静音状态下才尝试取消静音
-        videoElement.muted = false;
-      }
-      videoElement.play().catch((err) => {
-        console.warn('播放失败:', err);
-        // 如果解除静音后播放失败（通常是浏览器策略），保持静音并尝试播放
-        if (err.name === 'NotAllowedError') {
-          videoElement.muted = true;
-          videoElement.play().catch((e) => console.warn('静音播放也失败:', e));
-        }
-      });
-    }
-  }, [videoElement, isMuted]);
-
-  const pause = useCallback(() => {
-    if (videoElement) {
-      videoElement.pause();
-    }
-  }, [videoElement]);
-
-  const togglePlay = useCallback(() => {
-    if (videoElement) {
-      if (videoElement.paused) {
-        play();
-      } else {
-        pause();
-      }
-    }
-  }, [videoElement, play, pause]);
-
-  const seek = useCallback(
-    (time: number) => {
-      if (videoElement) {
-        isSeeking.current = true; // 开始拖动
-        videoElement.currentTime = time;
-      }
-    },
-    [videoElement]
-  );
-
-  // 拖动结束时调用，允许 timeupdate 再次更新 currentTime
-  const endSeek = useCallback(() => {
-    isSeeking.current = false;
-  }, []);
-
-  const setVolume = useCallback(
-    (value: number) => {
-      if (videoElement) {
-        videoElement.volume = Math.max(0, Math.min(1, value));
-        if (videoElement.volume > 0) {
-          videoElement.muted = false; // 设置音量大于0时取消静音
-        } else {
-          videoElement.muted = true; // 音量为0时静音
-        }
-      }
-    },
-    [videoElement]
-  );
-
-  const toggleMute = useCallback(() => {
-    if (videoElement) {
-      videoElement.muted = !videoElement.muted;
-      setIsMuted(videoElement.muted); // 立即更新状态
-    }
-  }, [videoElement]);
-  const setPlaybackRate = useCallback(
-    (rate: number) => {
-      if (videoElement) {
-        videoElement.playbackRate = rate;
-        setPlaybackRateState(rate); // 立即更新状态
-      }
-    },
-    [videoElement]
-  );
-
+  // 4. The final return value. If videoElement is null, these functions will still be called,
+  //    but their internal logic will bail out early due to the null checks.
   return {
     isPlaying,
     currentTime,
@@ -188,6 +224,7 @@ export const useVideoControl = (videoElement: HTMLVideoElement | null) => {
     endSeek,
     setVolume,
     toggleMute,
+    setMuted,
     setPlaybackRate,
   };
 };

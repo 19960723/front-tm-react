@@ -12,7 +12,7 @@ import VolumeUpRoundedIcon from '@mui/icons-material/VolumeUpRounded';
 import VolumeOffRoundedIcon from '@mui/icons-material/VolumeOffRounded';
 import FullscreenExitRoundedIcon from '@mui/icons-material/FullscreenExitRounded';
 import FullscreenRoundedIcon from '@mui/icons-material/FullscreenRounded';
-import { Box, Slider } from '@mui/material';
+import { Box, Slider, IconButton } from '@mui/material';
 
 import './douyin.css';
 import LoadingCom from '../Loading/index';
@@ -41,27 +41,30 @@ interface VideoPlayerWithControlsProps {
   onVideoRef: (id: string, el: HTMLVideoElement | null) => void; // 用于向父组件传递 video element ref
 }
 
-// 辅助函数：格式化时间，将秒转换为 MM:SS 格式
-const formatTime = (seconds: number) => {
-  if (isNaN(seconds) || seconds < 0) return '00:00';
-  const minutes = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-};
-
 const VideoControls: React.FC<VideoControlsProps> = React.memo((props) => {
-  const currentTime = 0;
-  const duration = 0;
   const isFullScreen = false;
-  const { isPlaying, isMuted, togglePlay, toggleMute } = props;
+  const { isPlaying, isMuted, currentTime, duration, togglePlay, toggleMute, seek, endSeek } = props;
+
+  const handleSliderChange = (event: Event, newValue: number | number[]) => {
+    console.log('newValue', newValue);
+    seek(newValue as number);
+  };
+  console.log(currentTime, 'currentTime');
+  // 处理 Slider 拖动结束事件
+  const handleSliderChangeCommitted = () => {
+    endSeek();
+  };
   return (
     <div onClick={(e) => e.stopPropagation()}>
       <div>
         <Slider
-          aria-label="time-indicator"
           size="small"
-          defaultValue={50}
-          valueLabelDisplay="auto"
+          value={currentTime}
+          min={0}
+          max={duration}
+          step={0.1}
+          onChange={handleSliderChange}
+          onChangeCommitted={handleSliderChangeCommitted}
           sx={(t) => ({
             color: '#fff',
             height: 4,
@@ -96,7 +99,7 @@ const VideoControls: React.FC<VideoControlsProps> = React.memo((props) => {
       <div className="flex flex-between items-center justify-between pl-[10px] pr-[10px] text-white">
         <div className="flex items-center">
           <Box className={`fas text-[18px] p-[10px] cursor-pointer`} onClick={togglePlay}>
-            {isPlaying ? <PauseRoundedIcon /> : <PlayArrowRoundedIcon />}
+            <IconButton sx={{ color: '#fff' }}>{isPlaying ? <PauseRoundedIcon /> : <PlayArrowRoundedIcon />}</IconButton>
           </Box>
           <span className="text-[14px] p-[10px]">
             {_duration(currentTime)} / {_duration(duration)}
@@ -104,9 +107,11 @@ const VideoControls: React.FC<VideoControlsProps> = React.memo((props) => {
         </div>
         <div className="flex">
           <Box className="fas text-[18px] p-[10px] cursor-pointer" onClick={toggleMute}>
-            {isMuted ? <VolumeUpRoundedIcon /> : <VolumeOffRoundedIcon />}
+            <IconButton sx={{ color: '#fff' }}>{isMuted ? <VolumeOffRoundedIcon /> : <VolumeUpRoundedIcon />}</IconButton>
           </Box>
-          <Box className="fas text-[18px] p-[10px] cursor-pointer">{isFullScreen ? <FullscreenRoundedIcon /> : <FullscreenExitRoundedIcon />}</Box>
+          <Box className="fas text-[18px] p-[10px] cursor-pointer">
+            <IconButton sx={{ color: '#fff' }}>{isFullScreen ? <FullscreenRoundedIcon /> : <FullscreenExitRoundedIcon />}</IconButton>
+          </Box>
         </div>
       </div>
     </div>
@@ -158,10 +163,14 @@ const VideoPlayerWithControls: React.FC<VideoPlayerWithControlsProps> = ({ video
           {
             <Box className="absolute bottom-0 left-0 w-full ">
               <VideoControls
+                currentTime={controls.currentTime}
+                duration={controls.duration}
                 isPlaying={controls.isPlaying}
                 isMuted={controls.isMuted}
                 togglePlay={controls.togglePlay}
                 toggleMute={controls.toggleMute}
+                seek={controls.seek}
+                endSeek={controls.endSeek}
               />
             </Box>
           }
@@ -187,28 +196,8 @@ const VideoPlayerWithControls: React.FC<VideoPlayerWithControlsProps> = ({ video
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* 播放/暂停按钮 */}
-          <button
-            style={{
-              background: 'none',
-              border: '2px solid white',
-              borderRadius: '50%',
-              color: 'white',
-              fontSize: '30px',
-              width: '60px',
-              height: '60px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-            }}
-          >
-            {controls.isPlaying ? '❚❚' : '▶'}
-          </button>
-
           {/* 进度条 */}
           <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span>{formatTime(controls.currentTime)}</span>
             <input
               type="range"
               min="0"
@@ -221,7 +210,6 @@ const VideoPlayerWithControls: React.FC<VideoPlayerWithControlsProps> = ({ video
               onTouchEnd={controls.endSeek}
               style={{ flexGrow: 1, height: '4px', background: '#ccc', borderRadius: '2px', cursor: 'pointer' }}
             />
-            <span>{formatTime(controls.duration)}</span>
           </div>
 
           {/* 音量控制 */}
